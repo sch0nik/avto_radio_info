@@ -17,6 +17,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 API_TOKEN = '5382856856:AAFbWXdhdxD1iNisi0_mcxJ_j-odFkzqu68'
 
+url_web_app = 'http://91.77.168.64:8081/word-game/data'
+
 BASE_URL = 'https://www.avtoradio.ru/'
 MONEY_URL = 'https://www.avtoradio.ru/money/'
 STREAM_URL = 'http://ic7.101.ru:8000/v3_1?139a7a02'
@@ -192,6 +194,7 @@ def task(browser):
     # send_message(API_TOKEN, CHAT_ID_CLOSED_CHAT, msg, 'Markdown')
     logging.info(f'Отправка сообщения в открытый чат')
     send_message(API_TOKEN, CHAT_ID_OPEN_CHAT, msg, 'Markdown')
+    requests.get(url_web_app, params={'summ': money, 'artist': artist, 'title': title})
     # logging.info(f'Отправка сообщения в открытый чат')
     # send_message(API_TOKEN, CHAT_ID_TEST_CHAT, msg, 'Markdown')
 
