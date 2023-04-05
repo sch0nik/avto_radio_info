@@ -1,0 +1,6 @@
+.venv/
+temp/
+.idea/
+*.log
+**/.pytest_cache
+*.mp3
