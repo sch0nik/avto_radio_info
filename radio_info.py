@@ -17,7 +17,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 API_TOKEN = '5382856856:AAFbWXdhdxD1iNisi0_mcxJ_j-odFkzqu68'
 
-url_web_app = 'http://91.77.168.64:8081/word-game/data'
+url_web_app = 'http://91.77.168.64:8081/avtoradio-info/data'
 
 BASE_URL = 'https://www.avtoradio.ru/'
 MONEY_URL = 'https://www.avtoradio.ru/money/'
