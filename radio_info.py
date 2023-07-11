@@ -15,6 +15,8 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 
+import log_settings
+
 API_TOKEN = '5382856856:AAFbWXdhdxD1iNisi0_mcxJ_j-odFkzqu68'
 
 url_web_app = 'http://91.77.168.64:8081/avtoradio-info/data'
@@ -107,22 +109,27 @@ def send_ACR(filename):
 
 
 def extract_data(result):
-    music = result.get('metadata').get('music')[0]
-    artist = music.get('artists')
-    artist = ', '.join([item['name'] for item in artist])
-    title = music.get('title')
+    try:
+        music = result.get('metadata').get('music')[0]
+        artist = music.get('artists')
+        artist = ', '.join([item['name'] for item in artist])
+        title = music.get('title')
+    except IndexError as error:
+        logging.info(f'{error}')
+        return '', ''
     return artist, title
 
 
 def get_sum():
-    r = requests.get(MONEY_URL)
-    if r.status_code == 200:
-        result = BeautifulSoup(r.text, 'html.parser')
-        result = result.select('.summa')[0]
-        result = result.text.strip()
-    else:
-        result = 'Неизвестно'
-    return result
+    result = ''
+    try:
+        r = requests.get(MONEY_URL)
+        if r.status_code == 200:
+            result = BeautifulSoup(r.text, 'html.parser')
+            result = result.select('.bank-stage__paragraph_amount')[0].text
+        return result
+    except Exception:
+        return result
 
 
 def task(browser):
@@ -182,41 +189,37 @@ def task(browser):
     artist, title = extract_data(result)
 
     # LAST_MSG.append((artist, title, money))
-    msg = (
-        f'*Внимание!*\n'
-        f'Близится игра «Много денег».\n'
-        f'*Сумма в банке - {money}р.*\n'
-        f'Исполнитель - *{artist}*\n'
-        f'Название песни - *{title}*\n'
-        f'Желаем удачи!'
-    )
+    if money:
+        msg = (
+            f'*Внимание!*\n'
+            f'Близится игра «Много денег».\n'
+            f'*Сумма в банке - {money}*\n'
+            f'Исполнитель - *{artist}*\n'
+            f'Название песни - *{title}*\n'
+            f'Желаем удачи!'
+        )
+    else:
+        msg = (
+            f'*Внимание!*\n'
+            f'Близится игра «Много денег».\n'
+            f'Исполнитель - *{artist}*\n'
+            f'Название песни - *{title}*\n'
+            f'Желаем удачи!'
+        )
     # logging.info(f'Отправка сообщения в закрытый чат')
     # send_message(API_TOKEN, CHAT_ID_CLOSED_CHAT, msg, 'Markdown')
     logging.info(f'Отправка сообщения в открытый чат')
     send_message(API_TOKEN, CHAT_ID_OPEN_CHAT, msg, 'Markdown')
-    requests.get(url_web_app, params={'summ': money, 'artist': artist, 'title': title})
+
+    try:
+        requests.get(url_web_app, params={'summ': money, 'artist': artist, 'title': title})
+    except Exception:
+        logging.info('Не удалось отправить сообщение, на сервер с домашним приложением')
+
     # logging.info(f'Отправка сообщения в открытый чат')
     # send_message(API_TOKEN, CHAT_ID_TEST_CHAT, msg, 'Markdown')
 
     logging.info('Задача завершена')
-
-
-def task_open_chat():
-    money = get_sum()
-    if LAST_MSG is None:
-        return 0
-    if LAST_MSG[-1] is None:
-        return 0
-
-    artist, title, old_money = LAST_MSG[-1]
-    msg = (
-        f'Информация о предыдущем розыгрыше игры «Много денег»\n'
-        f'*Сумма в банке - {old_money}р.*\n'
-        f'Исполнитель - *{artist}*\n'
-        f'Название песни - *{title}*\n'
-        f'*Сумма в банке на следующий розыгрыш - {money}*'
-    )
-    return send_message(API_TOKEN, CHAT_ID_OPEN_CHAT, msg, 'Markdown')
 
 
 def main():
@@ -224,7 +227,7 @@ def main():
     console_log = logging.StreamHandler()
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s::%(levelname)s::%(message)s',
+        format='%(asctime)s::%(levelname)s::%(funcName)s::%(message)s',
         handlers=(file_log, console_log)
     )
     logging.info('Старт скрипта')
@@ -239,22 +242,29 @@ def main():
             logging.info(f'{err}')
             browser.close()
 
+    element = browser.find_element(By.CLASS_NAME, 'TitleSongAir')
+    current_status = element.text
+    prev_msg = current_status
+
     logging.info('Добавление задач в список')
     for t in TIMINGS:
         schedule.every().day.at(t).do(task, browser=browser)
-    # for t in TIMINGS_OPEN_CHAT:
-    #     schedule.every().day.at(t).do(task_open_chat)
-    logging.info('Ожидание заданного времени')
+    logging.info(current_status)
     try:
         while True:
             try:
                 schedule.run_pending()
-                print(f'{datetime.datetime.now()}\r', end='')
-                time.sleep(1)
+                current_status = element.text
+                if current_status != prev_msg:
+                    logging.info(current_status)
+                    prev_msg = current_status
+                time.sleep(2)
             except Exception as err:
+                log_settings.send_log_line(err)
                 print(err)
     except KeyboardInterrupt:
         logging.info('Завершение работы')
+    finally:
         browser.close()
 
 

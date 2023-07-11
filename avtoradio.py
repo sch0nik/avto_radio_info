@@ -28,8 +28,8 @@ def get_sum():
     r = requests.get(MONEY_URL)
     if r.status_code == 200:
         result = BeautifulSoup(r.text, 'html.parser')
-        result = result.select('.summa')[0]
-        result = result.text.strip()
+        result = result.select('.bank-stage__paragraph_amount')[0]
+        result = result.text
     else:
-        result = 'Неизвестно'
+        result = ''
     return result
