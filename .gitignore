@@ -4,3 +4,4 @@ temp/
 *.log
 **/.pytest_cache
 *.mp3
+.env
